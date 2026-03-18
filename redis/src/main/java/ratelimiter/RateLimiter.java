@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.time.Instant;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.args.ExpiryOption;
 
 public class RateLimiter {
 
@@ -23,6 +24,16 @@ public class RateLimiter {
 
   public boolean pass() {
     // TODO: Implementation
+    //rate limiter на основе fixed window, через счетчик контролируем запросы в рамках одного окна
+    // по прошествию окна сбрасываем счетчик, решение со slidingWindow для последнего теста пока не додумал
+    String strCount = redis.get(label);   //достаем сколько запросов сделано
+    int count = strCount != null ? Integer.parseInt(strCount) : 0;
+
+    if (count < maxRequestCount) {
+      redis.incr(label);
+      redis.expire(label, timeWindowSeconds, ExpiryOption.NX); //если expire time еще не было установлено, то устанавливаем
+      return true;
+    }
     return false;
   }
 
